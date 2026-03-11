@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
-import { sendInvoiceMail } from "@/lib/mail";
+import { supabaseAdmin } from "../../../../../lib/supabase";
+import { sendInvoiceMail } from "../../../../../lib/mail";
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
