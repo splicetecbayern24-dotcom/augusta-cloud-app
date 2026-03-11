@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
-import { renderInvoicePdf } from "@/lib/pdf";
+import { supabaseAdmin } from "../../../../lib/supabase";
+import { renderInvoicePdf } from "../../../../lib/pdf";
 
 export async function POST(request: Request) {
   try {
