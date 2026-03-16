@@ -47,12 +47,22 @@ const supabase = createClient(
 
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
+
+  const [newCustomerId, setNewCustomerId] = useState("");
+  const [newProject, setNewProject] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newVatRate, setNewVatRate] = useState(19);
+  const [newItems, setNewItems] = useState([
+    { description: "", qty: 1, unit: "pauschal", unit_price: 0 },
+  ]);
 
   useEffect(() => {
     loadData();
@@ -98,6 +108,11 @@ export function Dashboard() {
       setSelectedId(loadedInvoices[0].id);
     }
 
+    if (loadedCustomers.length > 0 && !newCustomerId) {
+      setNewCustomerId(loadedCustomers[0].id);
+      setNewEmail(loadedCustomers[0].email || "");
+    }
+
     setLoading(false);
   }
 
@@ -136,21 +151,125 @@ export function Dashboard() {
     .filter((inv) => String(inv.status).toLowerCase() === "offen")
     .reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
 
+  function newNet() {
+    return newItems.reduce(
+      (sum, item) => sum + Number(item.qty || 0) * Number(item.unit_price || 0),
+      0
+    );
+  }
+
+  function newVatAmount() {
+    return newNet() * (Number(newVatRate || 0) / 100);
+  }
+
+  function newGross() {
+    return newNet() + newVatAmount();
+  }
+
+  function updateNewItem(index: number, patch: Partial<(typeof newItems)[0]>) {
+    setNewItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, ...patch } : item))
+    );
+  }
+
+  function addNewItem() {
+    setNewItems((prev) => [
+      ...prev,
+      { description: "", qty: 1, unit: "pauschal", unit_price: 0 },
+    ]);
+  }
+
+  function removeNewItem(index: number) {
+    if (newItems.length === 1) return;
+    setNewItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function saveNewInvoice() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    if (!newCustomerId) {
+      setError("Bitte Kunde auswählen.");
+      setSaving(false);
+      return;
+    }
+
+    if (!newProject.trim()) {
+      setError("Bitte Projekt eingeben.");
+      setSaving(false);
+      return;
+    }
+
+    const validItems = newItems.filter((x) => x.description.trim());
+    if (validItems.length === 0) {
+      setError("Bitte mindestens eine Position eingeben.");
+      setSaving(false);
+      return;
+    }
+
+    const invoiceNo = `RE-${Date.now()}`;
+    const invoiceDate = new Date().toISOString().slice(0, 10);
+    const dueDate = invoiceDate;
+
+    const invoiceInsert = await supabase
+      .from("invoices")
+      .insert({
+        invoice_no: invoiceNo,
+        customer_id: newCustomerId,
+        project_name: newProject,
+        invoice_date: invoiceDate,
+        due_date: dueDate,
+        status: "offen",
+        vat_rate: newVatRate,
+        net_amount: newNet(),
+        vat_amount: newVatAmount(),
+        gross_amount: newGross(),
+        recipient_email: newEmail || null,
+      })
+      .select("id")
+      .single();
+
+    if (invoiceInsert.error || !invoiceInsert.data) {
+      setError(invoiceInsert.error?.message || "Rechnung konnte nicht gespeichert werden.");
+      setSaving(false);
+      return;
+    }
+
+    const invoiceId = invoiceInsert.data.id;
+
+    const itemRows = validItems.map((item, index) => ({
+      invoice_id: invoiceId,
+      position_no: index + 1,
+      description: item.description,
+      qty: Number(item.qty || 0),
+      unit: item.unit,
+      unit_price: Number(item.unit_price || 0),
+      line_total: Number(item.qty || 0) * Number(item.unit_price || 0),
+    }));
+
+    const itemInsert = await supabase.from("invoice_items").insert(itemRows);
+
+    if (itemInsert.error) {
+      setError(itemInsert.error.message);
+      setSaving(false);
+      return;
+    }
+
+    setSuccess("Rechnung gespeichert.");
+    setNewProject("");
+    setNewEmail("");
+    setNewVatRate(19);
+    setNewItems([{ description: "", qty: 1, unit: "pauschal", unit_price: 0 }]);
+
+    await loadData();
+    setSaving(false);
+  }
+
   if (loading) {
     return (
       <div style={styles.page}>
         <div style={styles.centerBox}>Lade Daten aus Supabase…</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.centerBox}>
-          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>Fehler</div>
-          <div style={{ color: "#ffb4b4" }}>{error}</div>
-        </div>
       </div>
     );
   }
@@ -200,7 +319,7 @@ export function Dashboard() {
         <div style={styles.topBar}>
           <div>
             <div style={styles.title}>Rechnungen</div>
-            <div style={styles.sub}>Echte Daten aus Supabase</div>
+            <div style={styles.sub}>Supabase laden + speichern</div>
           </div>
 
           <input
@@ -211,9 +330,141 @@ export function Dashboard() {
           />
         </div>
 
+        {error ? <div style={styles.errorBox}>{error}</div> : null}
+        {success ? <div style={styles.successBox}>{success}</div> : null}
+
         <div style={styles.grid}>
           <div style={styles.panel}>
-            <div style={styles.panelTitle}>Rechnungsliste</div>
+            <div style={styles.panelTitle}>Neue Rechnung</div>
+
+            <div style={styles.formGrid}>
+              <div>
+                <label style={styles.label}>Kunde</label>
+                <select
+                  value={newCustomerId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setNewCustomerId(nextId);
+                    const c = customers.find((x) => x.id === nextId);
+                    setNewEmail(c?.email || "");
+                  }}
+                  style={styles.input}
+                >
+                  <option value="">Kunde wählen</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={styles.label}>Projekt</label>
+                <input
+                  value={newProject}
+                  onChange={(e) => setNewProject(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>Kunden-E-Mail</label>
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  style={styles.input}
+                />
+              </div>
+
+              <div>
+                <label style={styles.label}>MwSt. %</label>
+                <input
+                  value={newVatRate}
+                  onChange={(e) => setNewVatRate(Number(e.target.value || 0))}
+                  style={styles.input}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, fontWeight: 800, fontSize: 18 }}>
+              Positionen
+            </div>
+
+            {newItems.map((item, index) => (
+              <div key={index} style={styles.newItemGrid}>
+                <input
+                  placeholder="Beschreibung"
+                  value={item.description}
+                  onChange={(e) =>
+                    updateNewItem(index, { description: e.target.value })
+                  }
+                  style={styles.input}
+                />
+                <input
+                  placeholder="Menge"
+                  value={item.qty}
+                  onChange={(e) =>
+                    updateNewItem(index, { qty: Number(e.target.value || 0) })
+                  }
+                  style={styles.input}
+                />
+                <input
+                  placeholder="Einheit"
+                  value={item.unit}
+                  onChange={(e) =>
+                    updateNewItem(index, { unit: e.target.value })
+                  }
+                  style={styles.input}
+                />
+                <input
+                  placeholder="Preis"
+                  value={item.unit_price}
+                  onChange={(e) =>
+                    updateNewItem(index, {
+                      unit_price: Number(e.target.value || 0),
+                    })
+                  }
+                  style={styles.input}
+                />
+                <button
+                  onClick={() => removeNewItem(index)}
+                  style={styles.removeBtn}
+                >
+                  Entfernen
+                </button>
+              </div>
+            ))}
+
+            <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+              <button onClick={addNewItem} style={styles.secondaryBtn}>
+                Position hinzufügen
+              </button>
+              <button onClick={saveNewInvoice} style={styles.primaryBtn} disabled={saving}>
+                {saving ? "Speichert…" : "Rechnung speichern"}
+              </button>
+            </div>
+
+            <div style={styles.totalRow}>
+              <div style={styles.totalCard}>
+                <div style={styles.totalLabel}>Netto</div>
+                <div style={styles.totalValue}>{money(newNet())}</div>
+              </div>
+
+              <div style={styles.totalCard}>
+                <div style={styles.totalLabel}>MwSt.</div>
+                <div style={styles.totalValue}>{money(newVatAmount())}</div>
+              </div>
+
+              <div style={styles.totalCardHighlight}>
+                <div style={styles.totalLabel}>Brutto</div>
+                <div style={styles.totalValue}>{money(newGross())}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.panel}>
+            <div style={styles.panelTitle}>Rechnungen aus Supabase</div>
 
             <div style={styles.tableWrap}>
               <table style={styles.table}>
@@ -243,81 +494,37 @@ export function Dashboard() {
                         <td style={styles.td}>{customer?.company_name || "-"}</td>
                         <td style={styles.td}>{inv.project_name || "-"}</td>
                         <td style={styles.td}>{money(inv.gross_amount)}</td>
-                        <td style={styles.td}>
-                          <span style={badgeStyle(inv.status)}>{inv.status}</span>
-                        </td>
+                        <td style={styles.td}>{inv.status}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <div style={styles.panel}>
-            <div style={styles.panelTitle}>Rechnungsdetails</div>
 
             {selectedInvoice ? (
               <>
+                <div style={{ marginTop: 18, fontWeight: 800, fontSize: 18 }}>
+                  Details
+                </div>
+
                 <div style={styles.detailBox}>
                   <div><b>Rechnungsnummer:</b> {selectedInvoice.invoice_no}</div>
                   <div><b>Kunde:</b> {selectedCustomer?.company_name || "-"}</div>
                   <div><b>Projekt:</b> {selectedInvoice.project_name || "-"}</div>
                   <div><b>E-Mail:</b> {selectedInvoice.recipient_email || "-"}</div>
-                  <div><b>Status:</b> {selectedInvoice.status}</div>
-                  <div><b>Rechnungsdatum:</b> {selectedInvoice.invoice_date || "-"}</div>
-                  <div><b>Fällig:</b> {selectedInvoice.due_date || "-"}</div>
                 </div>
 
-                <div style={{ marginTop: 16, fontWeight: 800, fontSize: 18 }}>
-                  Positionen
-                </div>
-
-                <div style={styles.tableWrap}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Beschreibung</th>
-                        <th style={styles.th}>Menge</th>
-                        <th style={styles.th}>Einheit</th>
-                        <th style={styles.th}>Preis</th>
-                        <th style={styles.th}>Gesamt</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedItems.map((item) => (
-                        <tr key={item.id}>
-                          <td style={styles.td}>{item.description}</td>
-                          <td style={styles.td}>{item.qty}</td>
-                          <td style={styles.td}>{item.unit}</td>
-                          <td style={styles.td}>{money(item.unit_price)}</td>
-                          <td style={styles.td}>{money(item.line_total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={styles.totalRow}>
-                  <div style={styles.totalCard}>
-                    <div style={styles.totalLabel}>Netto</div>
-                    <div style={styles.totalValue}>{money(selectedInvoice.net_amount)}</div>
-                  </div>
-
-                  <div style={styles.totalCard}>
-                    <div style={styles.totalLabel}>MwSt.</div>
-                    <div style={styles.totalValue}>{money(selectedInvoice.vat_amount)}</div>
-                  </div>
-
-                  <div style={styles.totalCardHighlight}>
-                    <div style={styles.totalLabel}>Brutto</div>
-                    <div style={styles.totalValue}>{money(selectedInvoice.gross_amount)}</div>
-                  </div>
+                <div style={{ marginTop: 14 }}>
+                  {selectedItems.map((item) => (
+                    <div key={item.id} style={styles.itemLine}>
+                      <span>{item.description}</span>
+                      <span>{money(item.line_total)}</span>
+                    </div>
+                  ))}
                 </div>
               </>
-            ) : (
-              <div style={styles.detailBox}>Keine Rechnung gefunden.</div>
-            )}
+            ) : null}
           </div>
         </div>
       </section>
@@ -330,44 +537,6 @@ function money(value: number) {
     style: "currency",
     currency: "EUR",
   }).format(Number(value || 0));
-}
-
-function badgeStyle(status: string): React.CSSProperties {
-  const s = String(status).toLowerCase();
-
-  if (s === "offen") {
-    return {
-      display: "inline-flex",
-      padding: "6px 12px",
-      borderRadius: 999,
-      background: "rgba(255,194,87,.15)",
-      color: "#ffd881",
-      fontWeight: 800,
-      fontSize: 13,
-    };
-  }
-
-  if (s === "bezahlt") {
-    return {
-      display: "inline-flex",
-      padding: "6px 12px",
-      borderRadius: 999,
-      background: "rgba(58,214,151,.14)",
-      color: "#91f0cb",
-      fontWeight: 800,
-      fontSize: 13,
-    };
-  }
-
-  return {
-    display: "inline-flex",
-    padding: "6px 12px",
-    borderRadius: 999,
-    background: "rgba(105,164,255,.14)",
-    color: "#b5d3ff",
-    fontWeight: 800,
-    fontSize: 13,
-  };
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -399,17 +568,6 @@ const styles: Record<string, React.CSSProperties> = {
     bottom: -160,
     background: "radial-gradient(circle, rgba(19,73,170,.2), transparent 65%)",
     pointerEvents: "none",
-  },
-  centerBox: {
-    position: "relative",
-    zIndex: 2,
-    margin: "120px auto",
-    maxWidth: 700,
-    background: "rgba(255,255,255,.04)",
-    border: "1px solid rgba(255,255,255,.08)",
-    borderRadius: 24,
-    padding: 24,
-    gridColumn: "1 / span 2",
   },
   sidebar: {
     position: "relative",
@@ -509,6 +667,66 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     marginBottom: 16,
   },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+  },
+  label: {
+    display: "block",
+    marginBottom: 8,
+    color: "#9aaecd",
+    fontSize: 14,
+  },
+  input: {
+    width: "100%",
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,.07)",
+    background: "rgba(5,14,28,.7)",
+    color: "#f4f8ff",
+    padding: "0 14px",
+    fontSize: 15,
+    outline: "none",
+  },
+  newItemGrid: {
+    display: "grid",
+    gridTemplateColumns: "2fr .7fr .9fr .9fr auto",
+    gap: 10,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  primaryBtn: {
+    height: 48,
+    border: "none",
+    borderRadius: 16,
+    padding: "0 18px",
+    background: "linear-gradient(135deg,#ffcf3c,#f3b300)",
+    color: "#151515",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: 15,
+  },
+  secondaryBtn: {
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,.06)",
+    background: "rgba(255,255,255,.04)",
+    color: "#eef5ff",
+    padding: "0 16px",
+    cursor: "pointer",
+    fontSize: 15,
+  },
+  removeBtn: {
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,130,130,.18)",
+    background: "rgba(114,39,55,.46)",
+    color: "#ffc9c9",
+    padding: "0 14px",
+    cursor: "pointer",
+    fontSize: 14,
+  },
   tableWrap: {
     overflow: "hidden",
     borderRadius: 18,
@@ -536,6 +754,13 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(255,255,255,.07)",
     display: "grid",
     gap: 10,
+    marginTop: 12,
+  },
+  itemLine: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "10px 0",
+    borderBottom: "1px solid rgba(255,255,255,.05)",
   },
   totalRow: {
     display: "grid",
@@ -557,4 +782,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   totalLabel: { color: "#9aaecd", fontSize: 14, marginBottom: 10 },
   totalValue: { fontSize: 24, fontWeight: 900 },
+  errorBox: {
+    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    background: "rgba(255,80,80,.12)",
+    border: "1px solid rgba(255,80,80,.2)",
+    color: "#ffb4b4",
+  },
+  successBox: {
+    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    background: "rgba(58,214,151,.14)",
+    border: "1px solid rgba(58,214,151,.2)",
+    color: "#91f0cb",
+  },
 };
