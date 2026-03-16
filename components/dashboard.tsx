@@ -71,8 +71,7 @@ const [newCustomerEmail, setNewCustomerEmail] = useState("");
 const [newCustomerPhone, setNewCustomerPhone] = useState("");
 const [newCustomerCity, setNewCustomerCity] = useState("");
 const [newCustomerAddress, setNewCustomerAddress] = useState("");
-    { description: "", qty: 1, unit: "pauschal", unit_price: 0 },
-  ]);
+    
 
   useEffect(() => {
     loadData();
