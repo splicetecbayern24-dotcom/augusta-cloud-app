@@ -61,6 +61,12 @@ export function Dashboard() {
   const [newEmail, setNewEmail] = useState("");
   const [newVatRate, setNewVatRate] = useState(19);
   const [newItems, setNewItems] = useState([
+  const [newCustomerCompany, setNewCustomerCompany] = useState("");
+  const [newCustomerContact, setNewCustomerContact] = useState("");
+  const [newCustomerEmail, setNewCustomerEmail] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerCity, setNewCustomerCity] = useState("");
+  const [newCustomerAddress, setNewCustomerAddress] = useState("");
     { description: "", qty: 1, unit: "pauschal", unit_price: 0 },
   ]);
 
@@ -185,6 +191,45 @@ export function Dashboard() {
   }
 
   async function saveNewInvoice() {
+    async function saveCustomer() {
+  setError("");
+  setSuccess("");
+
+  if (!newCustomerCompany.trim()) {
+    setError("Bitte Firmenname für den Kunden eingeben.");
+    return;
+  }
+
+  const insert = await supabase
+    .from("customers")
+    .insert({
+      company_name: newCustomerCompany,
+      contact_name: newCustomerContact || null,
+      email: newCustomerEmail || null,
+      phone: newCustomerPhone || null,
+      city: newCustomerCity || null,
+      address: newCustomerAddress || null,
+    })
+    .select("*")
+    .single();
+
+  if (insert.error || !insert.data) {
+    setError(insert.error?.message || "Kunde konnte nicht gespeichert werden.");
+    return;
+  }
+
+  setSuccess("Kunde gespeichert.");
+  setCustomers((prev) => [insert.data as Customer, ...prev]);
+  setNewCustomerId(insert.data.id);
+  setNewEmail(insert.data.email || "");
+
+  setNewCustomerCompany("");
+  setNewCustomerContact("");
+  setNewCustomerEmail("");
+  setNewCustomerPhone("");
+  setNewCustomerCity("");
+  setNewCustomerAddress("");
+}
     setSaving(true);
     setError("");
     setSuccess("");
