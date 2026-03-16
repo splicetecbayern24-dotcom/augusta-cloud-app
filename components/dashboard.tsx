@@ -193,7 +193,46 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
     setNewItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function saveNewInvoice() {
+  async function saveNewInvoice() 
+  async function saveCustomer() {
+  setError("");
+  setSuccess("");
+
+  if (!newCustomerCompany.trim()) {
+    setError("Bitte Firmenname für den Kunden eingeben.");
+    return;
+  }
+
+  const insert = await supabase
+    .from("customers")
+    .insert({
+      company_name: newCustomerCompany,
+      contact_name: newCustomerContact || null,
+      email: newCustomerEmail || null,
+      phone: newCustomerPhone || null,
+      city: newCustomerCity || null,
+      address: newCustomerAddress || null,
+    })
+    .select("*")
+    .single();
+
+  if (insert.error || !insert.data) {
+    setError(insert.error?.message || "Kunde konnte nicht gespeichert werden.");
+    return;
+  }
+
+  setSuccess("Kunde gespeichert.");
+  setCustomers((prev) => [insert.data as Customer, ...prev]);
+  setNewCustomerId(insert.data.id);
+  setNewEmail(insert.data.email || "");
+
+  setNewCustomerCompany("");
+  setNewCustomerContact("");
+  setNewCustomerEmail("");
+  setNewCustomerPhone("");
+  setNewCustomerCity("");
+  setNewCustomerAddress("");
+}{
     async function saveCustomer() {
   setError("");
   setSuccess("");
