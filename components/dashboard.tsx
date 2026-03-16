@@ -384,13 +384,70 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
        <div style={styles.grid}>
 
   <div style={styles.panel}>
-    <div style={styles.panelTitle}>Neuen Kunden anlegen</div>
+  <div style={styles.panelTitle}>Neuen Kunden anlegen</div>
 
-    <div style={styles.formGrid}>
-      ...
+  <div style={styles.formGrid}>
+    <div>
+      <label style={styles.label}>Firmenname</label>
+      <input
+        value={newCustomerCompany}
+        onChange={(e) => setNewCustomerCompany(e.target.value)}
+        style={styles.input}
+      />
     </div>
 
+    <div>
+      <label style={styles.label}>Ansprechpartner</label>
+      <input
+        value={newCustomerContact}
+        onChange={(e) => setNewCustomerContact(e.target.value)}
+        style={styles.input}
+      />
+    </div>
+
+    <div>
+      <label style={styles.label}>E-Mail</label>
+      <input
+        value={newCustomerEmail}
+        onChange={(e) => setNewCustomerEmail(e.target.value)}
+        style={styles.input}
+      />
+    </div>
+
+    <div>
+      <label style={styles.label}>Telefon</label>
+      <input
+        value={newCustomerPhone}
+        onChange={(e) => setNewCustomerPhone(e.target.value)}
+        style={styles.input}
+      />
+    </div>
+
+    <div>
+      <label style={styles.label}>Ort</label>
+      <input
+        value={newCustomerCity}
+        onChange={(e) => setNewCustomerCity(e.target.value)}
+        style={styles.input}
+      />
+    </div>
+
+    <div>
+      <label style={styles.label}>Adresse</label>
+      <input
+        value={newCustomerAddress}
+        onChange={(e) => setNewCustomerAddress(e.target.value)}
+        style={styles.input}
+      />
+    </div>
   </div>
+
+  <div style={{ marginTop: 12 }}>
+    <button onClick={saveCustomer} style={styles.primaryBtn}>
+      Kunde speichern
+    </button>
+  </div>
+</div>
 
   <div style={styles.panel}>
     <div style={styles.panelTitle}>Neue Rechnung</div>
