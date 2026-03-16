@@ -381,9 +381,19 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
         {error ? <div style={styles.errorBox}>{error}</div> : null}
         {success ? <div style={styles.successBox}>{success}</div> : null}
 
-        <div style={styles.grid}>
-          <div style={styles.panel}>
-            <div style={styles.panelTitle}>Neue Rechnung</div>
+       <div style={styles.grid}>
+
+  <div style={styles.panel}>
+    <div style={styles.panelTitle}>Neuen Kunden anlegen</div>
+
+    <div style={styles.formGrid}>
+      ...
+    </div>
+
+  </div>
+
+  <div style={styles.panel}>
+    <div style={styles.panelTitle}>Neue Rechnung</div>
 
             <div style={styles.formGrid}>
               <div>
