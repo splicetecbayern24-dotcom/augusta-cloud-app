@@ -195,7 +195,8 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
 
   async function saveNewInvoice() 
   {
-    async function saveCustomer() {
+  }
+  async function saveCustomer() {
   setError("");
   setSuccess("");
 
