@@ -56,17 +56,21 @@ export function Dashboard() {
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
 
-  const [newCustomerId, setNewCustomerId] = useState("");
-  const [newProject, setNewProject] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newVatRate, setNewVatRate] = useState(19);
-  const [newItems, setNewItems] = useState([
-  const [newCustomerCompany, setNewCustomerCompany] = useState("");
-  const [newCustomerContact, setNewCustomerContact] = useState("");
-  const [newCustomerEmail, setNewCustomerEmail] = useState("");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [newCustomerCity, setNewCustomerCity] = useState("");
-  const [newCustomerAddress, setNewCustomerAddress] = useState("");
+ const [newCustomerId, setNewCustomerId] = useState("");
+const [newProject, setNewProject] = useState("");
+const [newEmail, setNewEmail] = useState("");
+const [newVatRate, setNewVatRate] = useState(19);
+
+const [newItems, setNewItems] = useState([
+  { description: "", qty: 1, unit: "pauschal", unit_price: 0 }
+]);
+
+const [newCustomerCompany, setNewCustomerCompany] = useState("");
+const [newCustomerContact, setNewCustomerContact] = useState("");
+const [newCustomerEmail, setNewCustomerEmail] = useState("");
+const [newCustomerPhone, setNewCustomerPhone] = useState("");
+const [newCustomerCity, setNewCustomerCity] = useState("");
+const [newCustomerAddress, setNewCustomerAddress] = useState("");
     { description: "", qty: 1, unit: "pauschal", unit_price: 0 },
   ]);
 
