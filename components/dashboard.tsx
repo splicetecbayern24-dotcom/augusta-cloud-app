@@ -31,7 +31,7 @@ type Invoice = {
   project_name?: string | null;
   invoice_date?: string | null;
   due_date?: string | null;
-  status: "offen" | "bezahlt" | string;
+  status: string;
   vat_rate: number;
   net_amount: number;
   vat_amount: number;
@@ -51,7 +51,7 @@ export function Dashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -86,16 +86,16 @@ export function Dashboard() {
       return;
     }
 
-    const customerData = (customersRes.data || []) as Customer[];
-    const invoiceData = (invoicesRes.data || []) as Invoice[];
-    const itemData = (itemsRes.data || []) as InvoiceItem[];
+    const loadedCustomers = (customersRes.data || []) as Customer[];
+    const loadedInvoices = (invoicesRes.data || []) as Invoice[];
+    const loadedItems = (itemsRes.data || []) as InvoiceItem[];
 
-    setCustomers(customerData);
-    setInvoices(invoiceData);
-    setItems(itemData);
+    setCustomers(loadedCustomers);
+    setInvoices(loadedInvoices);
+    setItems(loadedItems);
 
-    if (invoiceData.length > 0) {
-      setSelectedId(invoiceData[0].id);
+    if (loadedInvoices.length > 0) {
+      setSelectedId(loadedInvoices[0].id);
     }
 
     setLoading(false);
@@ -108,7 +108,7 @@ export function Dashboard() {
     return invoices.filter((inv) => {
       const customer = customers.find((c) => c.id === inv.customer_id);
       return [
-        inv.invoice_no,
+        inv.invoice_no || "",
         inv.project_name || "",
         inv.status || "",
         customer?.company_name || "",
@@ -127,7 +127,11 @@ export function Dashboard() {
     ? items.filter((item) => item.invoice_id === selectedInvoice.id)
     : [];
 
-  const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
+  const totalRevenue = invoices.reduce(
+    (sum, inv) => sum + Number(inv.gross_amount || 0),
+    0
+  );
+
   const totalOpen = invoices
     .filter((inv) => String(inv.status).toLowerCase() === "offen")
     .reduce((sum, inv) => sum + Number(inv.gross_amount || 0), 0);
@@ -153,32 +157,52 @@ export function Dashboard() {
 
   return (
     <main style={styles.page}>
-      <div style={styles.sidebar}>
-        <div style={styles.logo}>AUGUSTA Gerüstbau UG</div>
+      <div style={styles.glowA} />
+      <div style={styles.glowB} />
+
+      <aside style={styles.sidebar}>
+        <div style={styles.logoWrap}>
+          <div style={styles.logoMark}>A</div>
+          <div>
+            <div style={styles.logoTop}>AUGUSTA</div>
+            <div style={styles.logoBottom}>GERÜSTBAU UG</div>
+          </div>
+        </div>
+
+        <div style={styles.profileCard}>
+          <div style={styles.profileSmall}>Eingeloggt als</div>
+          <div style={styles.profileName}>Kürşat Turaner</div>
+          <div style={styles.profileRole}>Geschäftsführung</div>
+        </div>
+
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Kunden</div>
           <div style={styles.sideValue}>{customers.length}</div>
         </div>
+
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Rechnungen</div>
           <div style={styles.sideValue}>{invoices.length}</div>
         </div>
+
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Offen</div>
           <div style={styles.sideValue}>{money(totalOpen)}</div>
         </div>
+
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Umsatz</div>
           <div style={styles.sideValue}>{money(totalRevenue)}</div>
         </div>
-      </div>
+      </aside>
 
-      <div style={styles.content}>
+      <section style={styles.main}>
         <div style={styles.topBar}>
           <div>
             <div style={styles.title}>Rechnungen</div>
             <div style={styles.sub}>Echte Daten aus Supabase</div>
           </div>
+
           <input
             style={styles.search}
             placeholder="Rechnung suchen"
@@ -190,6 +214,7 @@ export function Dashboard() {
         <div style={styles.grid}>
           <div style={styles.panel}>
             <div style={styles.panelTitle}>Rechnungsliste</div>
+
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
@@ -204,20 +229,23 @@ export function Dashboard() {
                 <tbody>
                   {filteredInvoices.map((inv) => {
                     const customer = customers.find((c) => c.id === inv.customer_id);
+
                     return (
                       <tr
                         key={inv.id}
                         onClick={() => setSelectedId(inv.id)}
                         style={{
-                          ...styles.tr,
-                          ...(selectedId === inv.id ? styles.trActive : {}),
+                          ...styles.row,
+                          ...(selectedId === inv.id ? styles.rowActive : {}),
                         }}
                       >
                         <td style={styles.td}>{inv.invoice_no}</td>
                         <td style={styles.td}>{customer?.company_name || "-"}</td>
                         <td style={styles.td}>{inv.project_name || "-"}</td>
                         <td style={styles.td}>{money(inv.gross_amount)}</td>
-                        <td style={styles.td}>{inv.status}</td>
+                        <td style={styles.td}>
+                          <span style={badgeStyle(inv.status)}>{inv.status}</span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -237,10 +265,14 @@ export function Dashboard() {
                   <div><b>Projekt:</b> {selectedInvoice.project_name || "-"}</div>
                   <div><b>E-Mail:</b> {selectedInvoice.recipient_email || "-"}</div>
                   <div><b>Status:</b> {selectedInvoice.status}</div>
-                  <div><b>Datum:</b> {selectedInvoice.invoice_date || "-"}</div>
+                  <div><b>Rechnungsdatum:</b> {selectedInvoice.invoice_date || "-"}</div>
+                  <div><b>Fällig:</b> {selectedInvoice.due_date || "-"}</div>
                 </div>
 
-                <div style={{ marginTop: 16, fontWeight: 800, fontSize: 18 }}>Positionen</div>
+                <div style={{ marginTop: 16, fontWeight: 800, fontSize: 18 }}>
+                  Positionen
+                </div>
+
                 <div style={styles.tableWrap}>
                   <table style={styles.table}>
                     <thead>
@@ -271,10 +303,12 @@ export function Dashboard() {
                     <div style={styles.totalLabel}>Netto</div>
                     <div style={styles.totalValue}>{money(selectedInvoice.net_amount)}</div>
                   </div>
+
                   <div style={styles.totalCard}>
                     <div style={styles.totalLabel}>MwSt.</div>
                     <div style={styles.totalValue}>{money(selectedInvoice.vat_amount)}</div>
                   </div>
+
                   <div style={styles.totalCardHighlight}>
                     <div style={styles.totalLabel}>Brutto</div>
                     <div style={styles.totalValue}>{money(selectedInvoice.gross_amount)}</div>
@@ -286,7 +320,7 @@ export function Dashboard() {
             )}
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
@@ -298,35 +332,130 @@ function money(value: number) {
   }).format(Number(value || 0));
 }
 
+function badgeStyle(status: string): React.CSSProperties {
+  const s = String(status).toLowerCase();
+
+  if (s === "offen") {
+    return {
+      display: "inline-flex",
+      padding: "6px 12px",
+      borderRadius: 999,
+      background: "rgba(255,194,87,.15)",
+      color: "#ffd881",
+      fontWeight: 800,
+      fontSize: 13,
+    };
+  }
+
+  if (s === "bezahlt") {
+    return {
+      display: "inline-flex",
+      padding: "6px 12px",
+      borderRadius: 999,
+      background: "rgba(58,214,151,.14)",
+      color: "#91f0cb",
+      fontWeight: 800,
+      fontSize: 13,
+    };
+  }
+
+  return {
+    display: "inline-flex",
+    padding: "6px 12px",
+    borderRadius: 999,
+    background: "rgba(105,164,255,.14)",
+    color: "#b5d3ff",
+    fontWeight: 800,
+    fontSize: 13,
+  };
+}
+
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
     background: "linear-gradient(180deg,#050b14,#081222 45%,#0a1527)",
     color: "#f7fbff",
     padding: 16,
+    position: "relative",
+    overflow: "hidden",
     display: "grid",
-    gridTemplateColumns: "260px 1fr",
+    gridTemplateColumns: "280px 1fr",
     gap: 16,
   },
+  glowA: {
+    position: "absolute",
+    width: 420,
+    height: 420,
+    right: -120,
+    top: -120,
+    background: "radial-gradient(circle, rgba(255,191,0,.14), transparent 60%)",
+    pointerEvents: "none",
+  },
+  glowB: {
+    position: "absolute",
+    width: 600,
+    height: 500,
+    left: 260,
+    bottom: -160,
+    background: "radial-gradient(circle, rgba(19,73,170,.2), transparent 65%)",
+    pointerEvents: "none",
+  },
   centerBox: {
+    position: "relative",
+    zIndex: 2,
     margin: "120px auto",
     maxWidth: 700,
     background: "rgba(255,255,255,.04)",
     border: "1px solid rgba(255,255,255,.08)",
     borderRadius: 24,
     padding: 24,
+    gridColumn: "1 / span 2",
   },
   sidebar: {
+    position: "relative",
+    zIndex: 2,
     borderRadius: 30,
     padding: 16,
     border: "1px solid rgba(255,255,255,.08)",
     background: "linear-gradient(180deg, rgba(8,17,34,.95), rgba(6,12,24,.98))",
   },
-  logo: {
-    fontSize: 26,
-    fontWeight: 900,
-    marginBottom: 20,
+  logoWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 16,
   },
+  logoMark: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    background: "linear-gradient(135deg,#ffcf3c,#f3b300)",
+    color: "#111",
+    display: "grid",
+    placeItems: "center",
+    fontWeight: 900,
+    fontSize: 28,
+  },
+  logoTop: {
+    fontSize: 22,
+    fontWeight: 900,
+    letterSpacing: ".18em",
+  },
+  logoBottom: {
+    color: "#94a8c9",
+    letterSpacing: ".22em",
+    fontSize: 14,
+  },
+  profileCard: {
+    borderRadius: 22,
+    padding: 16,
+    background: "linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02))",
+    border: "1px solid rgba(255,255,255,.07)",
+    marginBottom: 18,
+  },
+  profileSmall: { color: "#94a8c9", fontSize: 13, marginBottom: 8 },
+  profileName: { fontSize: 30, fontWeight: 900, lineHeight: 1.05 },
+  profileRole: { color: "#9db0cf", marginTop: 6, fontSize: 15 },
   sideCard: {
     borderRadius: 18,
     padding: 16,
@@ -336,7 +465,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sideLabel: { color: "#98a9c7", fontSize: 13 },
   sideValue: { fontSize: 24, fontWeight: 900, marginTop: 8 },
-  content: {
+  main: {
+    position: "relative",
+    zIndex: 2,
     borderRadius: 30,
     padding: 16,
     border: "1px solid rgba(255,255,255,.08)",
@@ -396,8 +527,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid rgba(255,255,255,.05)",
     fontSize: 15,
   },
-  tr: { cursor: "pointer" },
-  trActive: { background: "rgba(255,255,255,.03)" },
+  row: { cursor: "pointer" },
+  rowActive: { background: "rgba(255,255,255,.03)" },
   detailBox: {
     borderRadius: 18,
     padding: 16,
@@ -427,23 +558,3 @@ const styles: Record<string, React.CSSProperties> = {
   totalLabel: { color: "#9aaecd", fontSize: 14, marginBottom: 10 },
   totalValue: { fontSize: 24, fontWeight: 900 },
 };
-'''
-
-page = r'''
-import { Dashboard } from "../components/dashboard";
-
-export default function Page() {
-  return <Dashboard />;
-}
-'''
-
-(proj / "dashboard.tsx").write_text(textwrap.dedent(dashboard).lstrip(), encoding="utf-8")
-(proj / "page.tsx").write_text(textwrap.dedent(page).lstrip(), encoding="utf-8")
-(proj / "README.txt").write_text("Phase A: laedt echte Daten aus Supabase.", encoding="utf-8")
-
-zip_path = base / "AUGUSTA_PhaseA_Supabase_Load.zip"
-with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-    for p in proj.iterdir():
-        zf.write(p, arcname=p.name)
-
-print(zip_path)
