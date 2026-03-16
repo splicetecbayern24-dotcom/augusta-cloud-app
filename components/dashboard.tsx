@@ -56,7 +56,7 @@ export function Dashboard() {
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
 
- const [newCustomerId, setNewCustomerId] = useState("");
+const [newCustomerId, setNewCustomerId] = useState("");
 const [newProject, setNewProject] = useState("");
 const [newEmail, setNewEmail] = useState("");
 const [newVatRate, setNewVatRate] = useState(19);
