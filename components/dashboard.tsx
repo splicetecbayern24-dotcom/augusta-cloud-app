@@ -193,7 +193,8 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
     setNewItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function saveNewInvoice() {
+  async function saveNewInvoice() 
+  {
     async function saveCustomer() {
   setError("");
   setSuccess("");
