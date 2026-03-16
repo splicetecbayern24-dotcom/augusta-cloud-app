@@ -37,6 +37,7 @@ type Invoice = {
   vat_amount: number;
   gross_amount: number;
   recipient_email?: string | null;
+  pdf_url?: string | null;
 };
 
 const supabase = createClient(
@@ -572,6 +573,56 @@ export function Dashboard() {
                   <div><b>Projekt:</b> {selectedInvoice.project_name || "-"}</div>
                   <div><b>E-Mail:</b> {selectedInvoice.recipient_email || "-"}</div>
                 </div>
+                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+  <button
+    style={styles.primaryBtn}
+    onClick={async () => {
+      if (!selectedInvoice) return;
+
+      const res = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          invoice: selectedInvoice,
+          customer: selectedCustomer,
+          items: selectedItems,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "PDF konnte nicht erstellt werden.");
+        return;
+      }
+
+      setSuccess("PDF erstellt.");
+      window.open(data.url, "_blank");
+      await loadData();
+    }}
+  >
+    PDF erstellen
+  </button>
+
+  {selectedInvoice?.pdf_url ? (
+    <a
+      href={selectedInvoice.pdf_url}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        ...styles.secondaryBtn,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textDecoration: "none",
+      }}
+    >
+      PDF öffnen
+    </a>
+  ) : null}
+</div>
 
                 <div style={{ marginTop: 14 }}>
                   {selectedItems.map((item) => (
