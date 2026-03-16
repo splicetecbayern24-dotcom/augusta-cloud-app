@@ -575,9 +575,16 @@ export function Dashboard() {
                 </div>
                 <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
   <button
-    style={styles.primaryBtn}
-    onClick={async () => {
-      if (!selectedInvoice) return;
+  style={styles.primaryBtn}
+  onClick={async () => {
+    try {
+      setError("");
+      setSuccess("");
+
+      if (!selectedInvoice) {
+        setError("Keine Rechnung ausgewählt.");
+        return;
+      }
 
       const res = await fetch("/api/generate-pdf", {
         method: "POST",
@@ -599,12 +606,21 @@ export function Dashboard() {
       }
 
       setSuccess("PDF erstellt.");
-      window.open(data.url, "_blank");
+      if (data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        setError("PDF wurde erstellt, aber keine URL zurückgegeben.");
+      }
+
       await loadData();
-    }}
-  >
-    PDF erstellen
-  </button>
+    } catch (err) {
+      setError("Fehler beim PDF-Erstellen.");
+      console.error(err);
+    }
+  }}
+>
+  PDF erstellen
+</button>
 
   {selectedInvoice?.pdf_url ? (
     <a
