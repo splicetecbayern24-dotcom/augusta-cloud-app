@@ -191,6 +191,7 @@ export function Dashboard() {
   }
 
   async function saveNewInvoice() {
+  {
     async function saveCustomer() {
   setError("");
   setSuccess("");
