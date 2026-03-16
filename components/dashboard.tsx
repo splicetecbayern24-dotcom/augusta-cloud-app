@@ -586,7 +586,7 @@ export function Dashboard() {
         return;
       }
 
-      const res = await fetch("/api/generate-pdf", {
+      const res = await fetch("/api/invoices/generate-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
