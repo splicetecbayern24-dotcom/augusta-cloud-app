@@ -193,8 +193,8 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
     setNewItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function saveNewInvoice() 
-  async function saveCustomer() {
+  async function saveNewInvoice() {
+    async function saveCustomer() {
   setError("");
   setSuccess("");
 
@@ -232,7 +232,7 @@ const [newCustomerAddress, setNewCustomerAddress] = useState("");
   setNewCustomerPhone("");
   setNewCustomerCity("");
   setNewCustomerAddress("");
-}{
+}
     async function saveCustomer() {
   setError("");
   setSuccess("");
