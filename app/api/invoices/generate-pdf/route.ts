@@ -51,14 +51,15 @@ export async function POST(req: Request) {
       font,
     });
 
-    const pdfBytes = await pdfDoc.save();
+ const pdfBytes = await pdfDoc.save();
+const pdfBuffer = new Uint8Array(pdfBytes);
 
-    return new Response(pdfBytes, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="rechnung-${invoice.invoice_no || "augusta"}.pdf"`,
-      },
-    });
+return new Response(pdfBuffer, {
+  headers: {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `inline; filename="rechnung-${invoice.invoice_no || "augusta"}.pdf"`,
+  },
+});
   } catch (error) {
     return new Response("PDF konnte nicht erstellt werden.", { status: 500 });
   }
