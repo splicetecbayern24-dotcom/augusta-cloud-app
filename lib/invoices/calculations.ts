@@ -1,5 +1,4 @@
-// 👇 WICHTIG: RELATIVE PATH
-import type { InvoiceItem } from "../../types/invoice";
+import type { InvoiceItem } from "@/types/invoice";
 
 export function calcLineTotal(item: InvoiceItem) {
   return Number(item.qty || 0) * Number(item.unit_price || 0);
