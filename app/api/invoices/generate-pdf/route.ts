@@ -4,12 +4,9 @@ export async function POST(req: Request) {
   try {
     const { invoice, customer, items } = await req.json();
 
-    if (!invoice) {
-      return new Response("Keine Rechnungsdaten", { status: 400 });
-    }
-
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]); // A4
+
     const width = page.getWidth();
     const height = page.getHeight();
 
@@ -22,16 +19,7 @@ export async function POST(req: Request) {
     const muted = rgb(0.4, 0.45, 0.52);
     const line = rgb(0.86, 0.88, 0.91);
 
-    // Hintergrund
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width,
-      height,
-      color: rgb(1, 1, 1),
-    });
-
-    // Header dunkel
+    // HEADER
     page.drawRectangle({
       x: 0,
       y: height - 120,
@@ -40,28 +28,27 @@ export async function POST(req: Request) {
       color: dark,
     });
 
-    // Logo-Monogramm
+    // LOGO BLOCK
     const logoX = 40;
     const logoY = height - 82;
     const logoSize = 46;
 
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: logoX,
       y: logoY,
       width: logoSize,
       height: logoSize,
-      borderRadius: 12,
       color: gold,
     });
 
-    // Gerüst-Look im Logo
+    // Gerüst Look
     page.drawRectangle({ x: logoX + 11, y: logoY + 9, width: 4, height: 28, color: dark });
     page.drawRectangle({ x: logoX + 21, y: logoY + 9, width: 4, height: 28, color: dark });
     page.drawRectangle({ x: logoX + 31, y: logoY + 9, width: 4, height: 28, color: dark });
     page.drawRectangle({ x: logoX + 11, y: logoY + 14, width: 24, height: 4, color: dark });
     page.drawRectangle({ x: logoX + 11, y: logoY + 25, width: 24, height: 4, color: dark });
 
-    // Firmenname
+    // TITEL
     page.drawText("AUGUSTA", {
       x: 98,
       y: height - 58,
@@ -79,14 +66,14 @@ export async function POST(req: Request) {
     });
 
     page.drawText("Rechnung", {
-      x: width - 145,
-      y: height - 62,
+      x: width - 140,
+      y: height - 60,
       size: 20,
       font: bold,
       color: light,
     });
 
-    // Firmenblock links
+    // FIRMA LINKS
     let y = height - 165;
 
     page.drawText("AUGUSTA Gerüstbau UG", {
@@ -98,42 +85,15 @@ export async function POST(req: Request) {
     });
 
     y -= 16;
-    page.drawText("Musterstraße 1", {
-      x: 40,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    });
+    page.drawText("Musterstraße 1", { x: 40, y, size: 10, font, color: muted });
 
     y -= 14;
-    page.drawText("86150 Augsburg", {
-      x: 40,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    });
+    page.drawText("86150 Augsburg", { x: 40, y, size: 10, font, color: muted });
 
     y -= 14;
-    page.drawText("E-Mail: info@augusta-geruestbau.de", {
-      x: 40,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    });
+    page.drawText("info@augusta.de", { x: 40, y, size: 10, font, color: muted });
 
-    y -= 14;
-    page.drawText("Tel: 0000 / 000000", {
-      x: 40,
-      y,
-      size: 10,
-      font,
-      color: muted,
-    });
-
-    // Kundenblock rechts
+    // KUNDE RECHTS
     let cy = height - 165;
 
     page.drawText("Rechnung an", {
@@ -145,259 +105,106 @@ export async function POST(req: Request) {
     });
 
     cy -= 16;
-    page.drawText(customer?.company_name || "-", {
-      x: 340,
-      y: cy,
-      size: 10,
-      font,
-      color: dark,
-    });
+    page.drawText(customer?.company_name || "-", { x: 340, y: cy, size: 10, font });
 
     cy -= 14;
-    page.drawText(customer?.contact_name || "", {
-      x: 340,
-      y: cy,
-      size: 10,
-      font,
-      color: muted,
-    });
+    page.drawText(customer?.address || "", { x: 340, y: cy, size: 10, font });
 
     cy -= 14;
-    page.drawText(customer?.address || "", {
-      x: 340,
-      y: cy,
-      size: 10,
-      font,
-      color: muted,
-    });
+    page.drawText(customer?.city || "", { x: 340, y: cy, size: 10, font });
 
-    cy -= 14;
-    page.drawText(customer?.city || "", {
-      x: 340,
-      y: cy,
-      size: 10,
-      font,
-      color: muted,
-    });
+    // INFOS
+    const infoY = height - 260;
 
-    cy -= 14;
-    page.drawText(invoice?.recipient_email || customer?.email || "", {
-      x: 340,
-      y: cy,
-      size: 10,
-      font,
-      color: muted,
-    });
-
-    // Infobox Rechnung
-    const infoTop = height - 285;
-
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: 40,
-      y: infoTop - 58,
+      y: infoY - 60,
       width: 515,
-      height: 58,
-      borderRadius: 10,
-      color: rgb(0.98, 0.98, 0.99),
-      borderColor: line,
-      borderWidth: 1,
+      height: 60,
+      color: rgb(0.97, 0.97, 0.98),
     });
 
-    const info = [
-      ["Rechnungsnr.", invoice?.invoice_no || "-"],
-      ["Datum", invoice?.invoice_date || "-"],
-      ["Fällig", invoice?.due_date || "-"],
-      ["Projekt", invoice?.project_name || "-"],
-    ];
+    page.drawText(`Rechnung: ${invoice?.invoice_no || "-"}`, {
+      x: 50,
+      y: infoY - 20,
+      size: 10,
+      font,
+    });
 
-    let ix = 55;
-    for (const [label, value] of info) {
-      page.drawText(label, {
-        x: ix,
-        y: infoTop - 18,
-        size: 9,
-        font: bold,
-        color: muted,
-      });
+    page.drawText(`Datum: ${invoice?.invoice_date || "-"}`, {
+      x: 50,
+      y: infoY - 40,
+      size: 10,
+      font,
+    });
 
-      page.drawText(String(value), {
-        x: ix,
-        y: infoTop - 35,
-        size: 10,
-        font,
-        color: dark,
-      });
+    page.drawText(`Projekt: ${invoice?.project_name || "-"}`, {
+      x: 300,
+      y: infoY - 20,
+      size: 10,
+      font,
+    });
 
-      ix += 125;
-    }
+    // TABELLE
+    let tableY = height - 350;
 
-    // Tabellenkopf
-    let tableY = height - 380;
-
-    page.drawRoundedRectangle({
+    page.drawRectangle({
       x: 40,
       y: tableY,
       width: 515,
-      height: 26,
-      borderRadius: 8,
+      height: 25,
       color: dark,
     });
 
-    page.drawText("Beschreibung", { x: 50, y: tableY + 8, size: 10, font: bold, color: light });
-    page.drawText("Menge", { x: 320, y: tableY + 8, size: 10, font: bold, color: light });
-    page.drawText("Preis", { x: 390, y: tableY + 8, size: 10, font: bold, color: light });
-    page.drawText("Gesamt", { x: 470, y: tableY + 8, size: 10, font: bold, color: light });
+    page.drawText("Beschreibung", { x: 50, y: tableY + 7, size: 10, font: bold, color: light });
+    page.drawText("Menge", { x: 320, y: tableY + 7, size: 10, font: bold, color: light });
+    page.drawText("Preis", { x: 390, y: tableY + 7, size: 10, font: bold, color: light });
+    page.drawText("Gesamt", { x: 470, y: tableY + 7, size: 10, font: bold, color: light });
 
-    let rowY = tableY - 28;
+    let rowY = tableY - 25;
 
-    const safeItems = Array.isArray(items) ? items : [];
+    for (const item of items || []) {
+      page.drawText(item.description || "-", { x: 50, y: rowY, size: 10, font });
+      page.drawText(String(item.qty || 0), { x: 325, y: rowY, size: 10, font });
+      page.drawText(`${item.unit_price || 0} €`, { x: 390, y: rowY, size: 10, font });
+      page.drawText(`${item.line_total || 0} €`, { x: 470, y: rowY, size: 10, font: bold });
 
-    for (const item of safeItems) {
-      page.drawLine({
-        start: { x: 40, y: rowY - 4 },
-        end: { x: 555, y: rowY - 4 },
-        thickness: 1,
-        color: line,
-      });
-
-      page.drawText(String(item.description || "-"), {
-        x: 50,
-        y: rowY + 6,
-        size: 10,
-        font,
-        color: dark,
-      });
-
-      page.drawText(String(item.qty ?? "-"), {
-        x: 325,
-        y: rowY + 6,
-        size: 10,
-        font,
-        color: dark,
-      });
-
-      page.drawText(`${Number(item.unit_price || 0).toFixed(2)} €`, {
-        x: 390,
-        y: rowY + 6,
-        size: 10,
-        font,
-        color: dark,
-      });
-
-      page.drawText(`${Number(item.line_total || 0).toFixed(2)} €`, {
-        x: 470,
-        y: rowY + 6,
-        size: 10,
-        font: bold,
-        color: dark,
-      });
-
-      rowY -= 28;
+      rowY -= 20;
     }
 
-    // Summenbox
-    const sumBoxY = rowY - 80;
+    // SUMMEN
+    const sumY = rowY - 40;
 
-    page.drawRoundedRectangle({
-      x: 325,
-      y: sumBoxY,
-      width: 230,
-      height: 88,
-      borderRadius: 12,
-      color: rgb(0.985, 0.985, 0.99),
-      borderColor: line,
-      borderWidth: 1,
-    });
+    page.drawText("Netto:", { x: 350, y: sumY, size: 10, font: bold });
+    page.drawText(`${invoice?.net_amount || 0} €`, { x: 450, y: sumY, size: 10, font });
 
-    page.drawText("Netto", {
-      x: 345,
-      y: sumBoxY + 60,
-      size: 10,
-      font: bold,
-      color: muted,
-    });
+    page.drawText("MwSt:", { x: 350, y: sumY - 20, size: 10, font: bold });
+    page.drawText(`${invoice?.vat_amount || 0} €`, { x: 450, y: sumY - 20, size: 10, font });
 
-    page.drawText(`${Number(invoice?.net_amount || 0).toFixed(2)} €`, {
-      x: 470,
-      y: sumBoxY + 60,
-      size: 10,
-      font,
-      color: dark,
-    });
-
-    page.drawText("MwSt.", {
-      x: 345,
-      y: sumBoxY + 38,
-      size: 10,
-      font: bold,
-      color: muted,
-    });
-
-    page.drawText(`${Number(invoice?.vat_amount || 0).toFixed(2)} €`, {
-      x: 470,
-      y: sumBoxY + 38,
-      size: 10,
-      font,
-      color: dark,
-    });
-
-    page.drawLine({
-      start: { x: 345, y: sumBoxY + 28 },
-      end: { x: 535, y: sumBoxY + 28 },
-      thickness: 1,
-      color: line,
-    });
-
-    page.drawText("Brutto", {
-      x: 345,
-      y: sumBoxY + 10,
-      size: 12,
-      font: bold,
-      color: dark,
-    });
-
-    page.drawText(`${Number(invoice?.gross_amount || 0).toFixed(2)} €`, {
-      x: 460,
-      y: sumBoxY + 10,
+    page.drawText("Brutto:", { x: 350, y: sumY - 40, size: 12, font: bold });
+    page.drawText(`${invoice?.gross_amount || 0} €`, {
+      x: 450,
+      y: sumY - 40,
       size: 12,
       font: bold,
       color: gold,
     });
 
-    // Footer
-    page.drawLine({
-      start: { x: 40, y: 80 },
-      end: { x: 555, y: 80 },
-      thickness: 1,
-      color: line,
-    });
-
-    page.drawText(
-      "Vielen Dank für Ihren Auftrag. Bitte überweisen Sie den Rechnungsbetrag fristgerecht.",
-      {
-        x: 40,
-        y: 58,
-        size: 9,
-        font,
-        color: muted,
-      }
-    );
-
-    page.drawText("AUGUSTA Gerüstbau UG · Bankdaten / IBAN folgen", {
+    // FOOTER
+    page.drawText("Vielen Dank für Ihren Auftrag!", {
       x: 40,
-      y: 42,
-      size: 9,
+      y: 50,
+      size: 10,
       font,
       color: muted,
     });
 
     const pdfBytes = await pdfDoc.save();
-    const pdfBuffer = new Uint8Array(pdfBytes);
 
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="rechnung-${invoice?.invoice_no || "augusta"}.pdf"`,
+        "Content-Disposition": `inline; filename="rechnung-${invoice?.invoice_no}.pdf"`,
       },
     });
   } catch (err) {
