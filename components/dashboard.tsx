@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Customer } from "@/types/customer";
-import type { Invoice, InvoiceItem } from "@/types/invoice";
-import { supabase } from "@/lib/supabase/client";
+
+// 👇 WICHTIG: RELATIVE PATHS (kein @ mehr)
+import type { Customer } from "../types/customer";
+import type { Invoice, InvoiceItem } from "../types/invoice";
+import { supabase } from "../lib/supabase/client";
 import {
   calcNet,
   calcVat,
   calcGross,
   calcLineTotal,
   formatEuro,
-} from "@/lib/invoices/calculations";
+} from "../lib/invoices/calculations";
 
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
