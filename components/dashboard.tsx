@@ -11,19 +11,6 @@ import {
   calcLineTotal,
   formatEuro,
 } from "@/lib/invoices/calculations";
-  calcNet,
-  calcVat,
-  calcGross,
-  calcLineTotal,
-  formatEuro,
-} from "@/lib/invoices/calculations";
-  calcNet,
-  calcVat,
-  calcGross,
-  calcLineTotal,
-  formatEuro,
-} from "../lib/invoices/calculations";
-
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
