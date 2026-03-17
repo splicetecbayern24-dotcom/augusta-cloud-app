@@ -9,16 +9,16 @@ export function calcNet(items: InvoiceItem[]) {
 }
 
 export function calcVat(items: InvoiceItem[], vatRate: number) {
-  return calcNet(items) * (Number(vatRate || 0) / 100);
+  return calcNet(items) * (vatRate / 100);
 }
 
 export function calcGross(items: InvoiceItem[], vatRate: number) {
   return calcNet(items) + calcVat(items, vatRate);
 }
 
-export function formatEuro(value: number | string | null | undefined) {
+export function formatEuro(value: number) {
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency: "EUR",
-  }).format(Number(value || 0));
+  }).format(value || 0);
 }
