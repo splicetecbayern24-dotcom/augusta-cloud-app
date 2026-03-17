@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "./LogoutButton";
 
 const navItems = [
   { href: "/rechnungen", label: "Rechnungen" },
@@ -47,6 +48,8 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <LogoutButton />
     </aside>
   );
 }
