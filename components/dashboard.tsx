@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-// 👇 WICHTIG: RELATIVE PATHS (kein @ mehr)
-import type { Customer } from "../types/customer";
-import type { Invoice, InvoiceItem } from "../types/invoice";
-import { supabase } from "../lib/supabase/client";
+import type { Customer } from "@/types/customer";
+import type { Invoice, InvoiceItem } from "@/types/invoice";
+import { supabase } from "@/lib/supabase/client";
 import {
+  calcNet,
+  calcVat,
+  calcGross,
+  calcLineTotal,
+  formatEuro,
+} from "@/lib/invoices/calculations";
   calcNet,
   calcVat,
   calcGross,
