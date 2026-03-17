@@ -1,49 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-type Customer = {
-  id: string;
-  company_name: string;
-  contact_name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  city?: string | null;
-  address?: string | null;
-};
-
-type InvoiceItem = {
-  id?: string;
-  invoice_id?: string;
-  position_no?: number;
-  description: string;
-  qty: number;
-  unit: string;
-  unit_price: number;
-  line_total?: number;
-};
-
-type Invoice = {
-  id: string;
-  invoice_no: string;
-  customer_id: string | null;
-  project_name?: string | null;
-  invoice_date?: string | null;
-  due_date?: string | null;
-  status: string;
-  vat_rate: number;
-  net_amount: number;
-  vat_amount: number;
-  gross_amount: number;
-  recipient_email?: string | null;
-  pdf_url?: string | null;
-};
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import type { Customer } from "@/types/customer";
+import type { Invoice, InvoiceItem } from "@/types/invoice";
+import { supabase } from "@/lib/supabase/client";
+import {
+  calcNet,
+  calcVat,
+  calcGross,
+  calcLineTotal,
+  formatEuro,
+} from "@/lib/invoices/calculations";
 
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -122,21 +89,6 @@ export function Dashboard() {
     }
 
     setLoading(false);
-  }
-
-  function calcNet(rows: InvoiceItem[]) {
-    return rows.reduce(
-      (sum, item) => sum + Number(item.qty || 0) * Number(item.unit_price || 0),
-      0
-    );
-  }
-
-  function calcVat(rows: InvoiceItem[], rate: number) {
-    return calcNet(rows) * (Number(rate || 0) / 100);
-  }
-
-  function calcGross(rows: InvoiceItem[], rate: number) {
-    return calcNet(rows) + calcVat(rows, rate);
   }
 
   async function saveCustomer() {
@@ -242,7 +194,7 @@ export function Dashboard() {
       qty: Number(item.qty || 0),
       unit: item.unit,
       unit_price: Number(item.unit_price || 0),
-      line_total: Number(item.qty || 0) * Number(item.unit_price || 0),
+      line_total: calcLineTotal(item),
     }));
 
     const itemInsert = await supabase.from("invoice_items").insert(itemRows);
@@ -350,12 +302,12 @@ export function Dashboard() {
 
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Offen</div>
-          <div style={styles.sideValue}>{money(totalOpen)}</div>
+          <div style={styles.sideValue}>{formatEuro(totalOpen)}</div>
         </div>
 
         <div style={styles.sideCard}>
           <div style={styles.sideLabel}>Umsatz</div>
-          <div style={styles.sideValue}>{money(totalRevenue)}</div>
+          <div style={styles.sideValue}>{formatEuro(totalRevenue)}</div>
         </div>
       </aside>
 
@@ -384,32 +336,56 @@ export function Dashboard() {
             <div style={styles.formGrid}>
               <div>
                 <label style={styles.label}>Firmenname</label>
-                <input value={newCustomerCompany} onChange={(e) => setNewCustomerCompany(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerCompany}
+                  onChange={(e) => setNewCustomerCompany(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>Ansprechpartner</label>
-                <input value={newCustomerContact} onChange={(e) => setNewCustomerContact(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerContact}
+                  onChange={(e) => setNewCustomerContact(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>E-Mail</label>
-                <input value={newCustomerEmail} onChange={(e) => setNewCustomerEmail(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerEmail}
+                  onChange={(e) => setNewCustomerEmail(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>Telefon</label>
-                <input value={newCustomerPhone} onChange={(e) => setNewCustomerPhone(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerPhone}
+                  onChange={(e) => setNewCustomerPhone(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>Ort</label>
-                <input value={newCustomerCity} onChange={(e) => setNewCustomerCity(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerCity}
+                  onChange={(e) => setNewCustomerCity(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>Adresse</label>
-                <input value={newCustomerAddress} onChange={(e) => setNewCustomerAddress(e.target.value)} style={styles.input} />
+                <input
+                  value={newCustomerAddress}
+                  onChange={(e) => setNewCustomerAddress(e.target.value)}
+                  style={styles.input}
+                />
               </div>
             </div>
 
@@ -447,17 +423,29 @@ export function Dashboard() {
 
               <div>
                 <label style={styles.label}>Projekt</label>
-                <input value={newProject} onChange={(e) => setNewProject(e.target.value)} style={styles.input} />
+                <input
+                  value={newProject}
+                  onChange={(e) => setNewProject(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>Kunden-E-Mail</label>
-                <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={styles.input} />
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  style={styles.input}
+                />
               </div>
 
               <div>
                 <label style={styles.label}>MwSt. %</label>
-                <input value={newVatRate} onChange={(e) => setNewVatRate(Number(e.target.value || 0))} style={styles.input} />
+                <input
+                  value={newVatRate}
+                  onChange={(e) => setNewVatRate(Number(e.target.value || 0))}
+                  style={styles.input}
+                />
               </div>
             </div>
 
@@ -488,7 +476,9 @@ export function Dashboard() {
                 <input
                   placeholder="Preis"
                   value={item.unit_price}
-                  onChange={(e) => updateNewItem(index, { unit_price: Number(e.target.value || 0) })}
+                  onChange={(e) =>
+                    updateNewItem(index, { unit_price: Number(e.target.value || 0) })
+                  }
                   style={styles.input}
                 />
                 <button onClick={() => removeNewItem(index)} style={styles.removeBtn}>
@@ -509,17 +499,17 @@ export function Dashboard() {
             <div style={styles.totalRow}>
               <div style={styles.totalCard}>
                 <div style={styles.totalLabel}>Netto</div>
-                <div style={styles.totalValue}>{money(calcNet(newItems))}</div>
+                <div style={styles.totalValue}>{formatEuro(calcNet(newItems))}</div>
               </div>
 
               <div style={styles.totalCard}>
                 <div style={styles.totalLabel}>MwSt.</div>
-                <div style={styles.totalValue}>{money(calcVat(newItems, newVatRate))}</div>
+                <div style={styles.totalValue}>{formatEuro(calcVat(newItems, newVatRate))}</div>
               </div>
 
               <div style={styles.totalCardHighlight}>
                 <div style={styles.totalLabel}>Brutto</div>
-                <div style={styles.totalValue}>{money(calcGross(newItems, newVatRate))}</div>
+                <div style={styles.totalValue}>{formatEuro(calcGross(newItems, newVatRate))}</div>
               </div>
             </div>
           </div>
@@ -554,7 +544,7 @@ export function Dashboard() {
                         <td style={styles.td}>{inv.invoice_no}</td>
                         <td style={styles.td}>{customer?.company_name || "-"}</td>
                         <td style={styles.td}>{inv.project_name || "-"}</td>
-                        <td style={styles.td}>{money(inv.gross_amount)}</td>
+                        <td style={styles.td}>{formatEuro(inv.gross_amount)}</td>
                         <td style={styles.td}>{inv.status}</td>
                       </tr>
                     );
@@ -573,81 +563,58 @@ export function Dashboard() {
                   <div><b>Projekt:</b> {selectedInvoice.project_name || "-"}</div>
                   <div><b>E-Mail:</b> {selectedInvoice.recipient_email || "-"}</div>
                 </div>
+
                 <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
- <button
-  onClick={async () => {
-    try {
-      setError("");
-      setSuccess("");
+                  <button
+                    style={styles.primaryBtn}
+                    onClick={async () => {
+                      try {
+                        setError("");
+                        setSuccess("");
 
-      if (!selectedInvoice) {
-        setError("Keine Rechnung ausgewählt.");
-        return;
-      }
+                        if (!selectedInvoice) {
+                          setError("Keine Rechnung ausgewählt.");
+                          return;
+                        }
 
-      const res = await fetch("/api/invoices/generate-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          invoice: selectedInvoice,
-        }),
-      });
+                        const res = await fetch("/api/invoices/generate-pdf", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            invoice: selectedInvoice,
+                            customer: selectedCustomer,
+                            items: selectedItems,
+                          }),
+                        });
 
-      if (!res.ok) {
-        const text = await res.text();
-        setError(text || "PDF konnte nicht erstellt werden.");
-        return;
-      }
+                        if (!res.ok) {
+                          const text = await res.text();
+                          setError(text || "PDF konnte nicht erstellt werden.");
+                          return;
+                        }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        window.open(url, "_blank");
 
-      setSuccess("PDF erstellt.");
-    } catch (err) {
-      console.error(err);
-      setError("Fehler beim PDF-Erstellen.");
-    }
-  }}
-  style={{
-    background: "#ffd700",
-    color: "#000",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "bold",
-    marginTop: "10px"
-  }}
->
-  PDF erstellen
-</button>
-
-  {selectedInvoice?.pdf_url ? (
-    <a
-      href={selectedInvoice.pdf_url}
-      target="_blank"
-      rel="noreferrer"
-      style={{
-        ...styles.secondaryBtn,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        textDecoration: "none",
-      }}
-    >
-      PDF öffnen
-    </a>
-  ) : null}
-</div>
+                        setSuccess("PDF erstellt.");
+                      } catch (err) {
+                        console.error(err);
+                        setError("Fehler beim PDF-Erstellen.");
+                      }
+                    }}
+                  >
+                    PDF erstellen
+                  </button>
+                </div>
 
                 <div style={{ marginTop: 14 }}>
                   {selectedItems.map((item) => (
                     <div key={item.id} style={styles.itemLine}>
                       <span>{item.description}</span>
-                      <span>{money(item.line_total || 0)}</span>
+                      <span>{formatEuro(item.line_total || 0)}</span>
                     </div>
                   ))}
                 </div>
@@ -660,58 +627,311 @@ export function Dashboard() {
   );
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(value || 0));
-}
-
 const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "linear-gradient(180deg,#050b14,#081222 45%,#0a1527)", color: "#f7fbff", padding: 16, position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 },
-  glowA: { position: "absolute", width: 420, height: 420, right: -120, top: -120, background: "radial-gradient(circle, rgba(255,191,0,.14), transparent 60%)", pointerEvents: "none" },
-  glowB: { position: "absolute", width: 600, height: 500, left: 260, bottom: -160, background: "radial-gradient(circle, rgba(19,73,170,.2), transparent 65%)", pointerEvents: "none" },
-  centerBox: { margin: "120px auto", maxWidth: 700, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 24, padding: 24 },
-  sidebar: { position: "relative", zIndex: 2, borderRadius: 30, padding: 16, border: "1px solid rgba(255,255,255,.08)", background: "linear-gradient(180deg, rgba(8,17,34,.95), rgba(6,12,24,.98))" },
-  logoWrap: { display: "flex", alignItems: "center", gap: 14, marginBottom: 16 },
-  logoMark: { width: 52, height: 52, borderRadius: 18, background: "linear-gradient(135deg,#ffcf3c,#f3b300)", color: "#111", display: "grid", placeItems: "center", fontWeight: 900, fontSize: 28 },
-  logoTop: { fontSize: 22, fontWeight: 900, letterSpacing: ".18em" },
-  logoBottom: { color: "#94a8c9", letterSpacing: ".22em", fontSize: 14 },
-  profileCard: { borderRadius: 22, padding: 16, background: "linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02))", border: "1px solid rgba(255,255,255,.07)", marginBottom: 18 },
-  profileSmall: { color: "#94a8c9", fontSize: 13, marginBottom: 8 },
-  profileName: { fontSize: 30, fontWeight: 900, lineHeight: 1.05 },
-  profileRole: { color: "#9db0cf", marginTop: 6, fontSize: 15 },
-  sideCard: { borderRadius: 18, padding: 16, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)", marginBottom: 12 },
-  sideLabel: { color: "#98a9c7", fontSize: 13 },
-  sideValue: { fontSize: 24, fontWeight: 900, marginTop: 8 },
-  main: { position: "relative", zIndex: 2, borderRadius: 30, padding: 16, border: "1px solid rgba(255,255,255,.08)", background: "linear-gradient(180deg, rgba(9,19,37,.95), rgba(7,13,25,.98))" },
-  topBar: { display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 16, alignItems: "center" },
-  title: { fontSize: 34, fontWeight: 900 },
-  sub: { color: "#93a6c5", fontSize: 14, marginTop: 6 },
-  search: { width: 320, height: 50, borderRadius: 18, border: "1px solid rgba(255,255,255,.08)", background: "rgba(3,10,21,.64)", color: "#f2f7ff", padding: "0 16px", fontSize: 16, outline: "none" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
-  panel: { borderRadius: 24, padding: 16, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.03)" },
-  panelTitle: { fontSize: 22, fontWeight: 900, marginBottom: 16 },
-  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-  label: { display: "block", marginBottom: 8, color: "#9aaecd", fontSize: 14 },
-  input: { width: "100%", height: 48, borderRadius: 16, border: "1px solid rgba(255,255,255,.07)", background: "rgba(5,14,28,.7)", color: "#f4f8ff", padding: "0 14px", fontSize: 15, outline: "none" },
-  newItemGrid: { display: "grid", gridTemplateColumns: "2fr .7fr .9fr .9fr auto", gap: 10, marginTop: 12, alignItems: "center" },
-  primaryBtn: { height: 48, border: "none", borderRadius: 16, padding: "0 18px", background: "linear-gradient(135deg,#ffcf3c,#f3b300)", color: "#151515", fontWeight: 800, cursor: "pointer", fontSize: 15 },
-  secondaryBtn: { height: 48, borderRadius: 16, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.04)", color: "#eef5ff", padding: "0 16px", cursor: "pointer", fontSize: 15 },
-  removeBtn: { height: 48, borderRadius: 16, border: "1px solid rgba(255,130,130,.18)", background: "rgba(114,39,55,.46)", color: "#ffc9c9", padding: "0 14px", cursor: "pointer", fontSize: 14 },
-  tableWrap: { overflow: "hidden", borderRadius: 18, border: "1px solid rgba(255,255,255,.07)" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { textAlign: "left", padding: "14px", color: "#93a6c5", fontSize: 14, borderBottom: "1px solid rgba(255,255,255,.06)" },
-  td: { padding: "14px", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: 15 },
-  row: { cursor: "pointer" },
-  rowActive: { background: "rgba(255,255,255,.03)" },
-  detailBox: { borderRadius: 18, padding: 16, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)", display: "grid", gap: 10, marginTop: 12 },
-  itemLine: { display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,.05)" },
-  totalRow: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 16 },
-  totalCard: { borderRadius: 20, padding: 16, background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" },
-  totalCardHighlight: { borderRadius: 20, padding: 16, background: "linear-gradient(135deg,#ffcf3c22,#f3b30033)", border: "1px solid rgba(255,207,60,.2)" },
-  totalLabel: { color: "#9aaecd", fontSize: 14, marginBottom: 10 },
-  totalValue: { fontSize: 24, fontWeight: 900 },
-  errorBox: { marginBottom: 14, borderRadius: 16, padding: 14, background: "rgba(255,80,80,.12)", border: "1px solid rgba(255,80,80,.2)", color: "#ffb4b4" },
-  successBox: { marginBottom: 14, borderRadius: 16, padding: 14, background: "rgba(58,214,151,.14)", border: "1px solid rgba(58,214,151,.2)", color: "#91f0cb" },
+  page: {
+    minHeight: "100vh",
+    background: "linear-gradient(180deg,#050b14,#081222 45%,#0a1527)",
+    color: "#f7fbff",
+    padding: 16,
+    position: "relative",
+    overflow: "hidden",
+    display: "grid",
+    gridTemplateColumns: "280px 1fr",
+    gap: 16,
+  },
+  glowA: {
+    position: "absolute",
+    width: 420,
+    height: 420,
+    right: -120,
+    top: -120,
+    background: "radial-gradient(circle, rgba(255,191,0,.14), transparent 60%)",
+    pointerEvents: "none",
+  },
+  glowB: {
+    position: "absolute",
+    width: 600,
+    height: 500,
+    left: 260,
+    bottom: -160,
+    background: "radial-gradient(circle, rgba(19,73,170,.2), transparent 65%)",
+    pointerEvents: "none",
+  },
+  centerBox: {
+    margin: "120px auto",
+    maxWidth: 700,
+    background: "rgba(255,255,255,.04)",
+    border: "1px solid rgba(255,255,255,.08)",
+    borderRadius: 24,
+    padding: 24,
+  },
+  sidebar: {
+    position: "relative",
+    zIndex: 2,
+    borderRadius: 30,
+    padding: 16,
+    border: "1px solid rgba(255,255,255,.08)",
+    background: "linear-gradient(180deg, rgba(8,17,34,.95), rgba(6,12,24,.98))",
+  },
+  logoWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 16,
+  },
+  logoMark: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    background: "linear-gradient(135deg,#ffcf3c,#f3b300)",
+    color: "#111",
+    display: "grid",
+    placeItems: "center",
+    fontWeight: 900,
+    fontSize: 28,
+  },
+  logoTop: {
+    fontSize: 22,
+    fontWeight: 900,
+    letterSpacing: ".18em",
+  },
+  logoBottom: {
+    color: "#94a8c9",
+    letterSpacing: ".22em",
+    fontSize: 14,
+  },
+  profileCard: {
+    borderRadius: 22,
+    padding: 16,
+    background: "linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02))",
+    border: "1px solid rgba(255,255,255,.07)",
+    marginBottom: 18,
+  },
+  profileSmall: {
+    color: "#94a8c9",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  profileName: {
+    fontSize: 30,
+    fontWeight: 900,
+    lineHeight: 1.05,
+  },
+  profileRole: {
+    color: "#9db0cf",
+    marginTop: 6,
+    fontSize: 15,
+  },
+  sideCard: {
+    borderRadius: 18,
+    padding: 16,
+    background: "rgba(255,255,255,.04)",
+    border: "1px solid rgba(255,255,255,.07)",
+    marginBottom: 12,
+  },
+  sideLabel: {
+    color: "#98a9c7",
+    fontSize: 13,
+  },
+  sideValue: {
+    fontSize: 24,
+    fontWeight: 900,
+    marginTop: 8,
+  },
+  main: {
+    position: "relative",
+    zIndex: 2,
+    borderRadius: 30,
+    padding: 16,
+    border: "1px solid rgba(255,255,255,.08)",
+    background: "linear-gradient(180deg, rgba(9,19,37,.95), rgba(7,13,25,.98))",
+  },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 900,
+  },
+  sub: {
+    color: "#93a6c5",
+    fontSize: 14,
+    marginTop: 6,
+  },
+  search: {
+    width: 320,
+    height: 50,
+    borderRadius: 18,
+    border: "1px solid rgba(255,255,255,.08)",
+    background: "rgba(3,10,21,.64)",
+    color: "#f2f7ff",
+    padding: "0 16px",
+    fontSize: 16,
+    outline: "none",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 16,
+  },
+  panel: {
+    borderRadius: 24,
+    padding: 16,
+    border: "1px solid rgba(255,255,255,.07)",
+    background: "rgba(255,255,255,.03)",
+  },
+  panelTitle: {
+    fontSize: 22,
+    fontWeight: 900,
+    marginBottom: 16,
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+  },
+  label: {
+    display: "block",
+    marginBottom: 8,
+    color: "#9aaecd",
+    fontSize: 14,
+  },
+  input: {
+    width: "100%",
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,.07)",
+    background: "rgba(5,14,28,.7)",
+    color: "#f4f8ff",
+    padding: "0 14px",
+    fontSize: 15,
+    outline: "none",
+  },
+  newItemGrid: {
+    display: "grid",
+    gridTemplateColumns: "2fr .7fr .9fr .9fr auto",
+    gap: 10,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  primaryBtn: {
+    height: 48,
+    border: "none",
+    borderRadius: 16,
+    padding: "0 18px",
+    background: "linear-gradient(135deg,#ffcf3c,#f3b300)",
+    color: "#151515",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: 15,
+  },
+  secondaryBtn: {
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,255,255,.06)",
+    background: "rgba(255,255,255,.04)",
+    color: "#eef5ff",
+    padding: "0 16px",
+    cursor: "pointer",
+    fontSize: 15,
+  },
+  removeBtn: {
+    height: 48,
+    borderRadius: 16,
+    border: "1px solid rgba(255,130,130,.18)",
+    background: "rgba(114,39,55,.46)",
+    color: "#ffc9c9",
+    padding: "0 14px",
+    cursor: "pointer",
+    fontSize: 14,
+  },
+  tableWrap: {
+    overflow: "hidden",
+    borderRadius: 18,
+    border: "1px solid rgba(255,255,255,.07)",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    padding: "14px",
+    color: "#93a6c5",
+    fontSize: 14,
+    borderBottom: "1px solid rgba(255,255,255,.06)",
+  },
+  td: {
+    padding: "14px",
+    borderBottom: "1px solid rgba(255,255,255,.05)",
+    fontSize: 15,
+  },
+  row: {
+    cursor: "pointer",
+  },
+  rowActive: {
+    background: "rgba(255,255,255,.03)",
+  },
+  detailBox: {
+    borderRadius: 18,
+    padding: 16,
+    background: "rgba(255,255,255,.04)",
+    border: "1px solid rgba(255,255,255,.07)",
+    display: "grid",
+    gap: 10,
+    marginTop: 12,
+  },
+  itemLine: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "10px 0",
+    borderBottom: "1px solid rgba(255,255,255,.05)",
+  },
+  totalRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 12,
+    marginTop: 16,
+  },
+  totalCard: {
+    borderRadius: 20,
+    padding: 16,
+    background: "rgba(255,255,255,.04)",
+    border: "1px solid rgba(255,255,255,.07)",
+  },
+  totalCardHighlight: {
+    borderRadius: 20,
+    padding: 16,
+    background: "linear-gradient(135deg,#ffcf3c22,#f3b30033)",
+    border: "1px solid rgba(255,207,60,.2)",
+  },
+  totalLabel: {
+    color: "#9aaecd",
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  totalValue: {
+    fontSize: 24,
+    fontWeight: 900,
+  },
+  errorBox: {
+    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    background: "rgba(255,80,80,.12)",
+    border: "1px solid rgba(255,80,80,.2)",
+    color: "#ffb4b4",
+  },
+  successBox: {
+    marginBottom: 14,
+    borderRadius: 16,
+    padding: 14,
+    background: "rgba(58,214,151,.14)",
+    border: "1px solid rgba(58,214,151,.2)",
+    color: "#91f0cb",
+  },
 };
