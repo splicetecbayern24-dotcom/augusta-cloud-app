@@ -51,9 +51,7 @@ export async function POST(req: Request) {
       font,
     });
 
- const pdfBytes = await pdfDoc.save();
-const pdfBuffer = new Uint8Array(pdfBytes);
-
+const pdfBytes = await pdfDoc.save();
 const pdfBuffer = new Uint8Array(pdfBytes);
 
 return new Response(pdfBuffer, {
