@@ -54,6 +54,8 @@ export async function POST(req: Request) {
  const pdfBytes = await pdfDoc.save();
 const pdfBuffer = new Uint8Array(pdfBytes);
 
+const pdfBuffer = new Uint8Array(pdfBytes);
+
 return new Response(pdfBuffer, {
   headers: {
     "Content-Type": "application/pdf",
