@@ -1,8 +1,19 @@
+import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 
 export async function POST(req: Request) {
   try {
-    const { invoice } = await req.json();
+    const body = await req.json();
+    console.log("PDF BODY:", body);
+
+    const invoice = body?.invoice;
+
+    if (!invoice) {
+      return NextResponse.json(
+        { error: "Keine Rechnungsdaten erhalten." },
+        { status: 400 }
+      );
+    }
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([600, 400]);
@@ -23,44 +34,48 @@ export async function POST(req: Request) {
       font: bold,
     });
 
-    page.drawText(`Rechnungsnummer: ${invoice.invoice_no || "-"}`, {
+    page.drawText(`Rechnungsnummer: ${invoice.invoice_no ?? "-"}`, {
       x: 50,
       y: 280,
       size: 12,
       font,
     });
 
-    page.drawText(`Projekt: ${invoice.project_name || "-"}`, {
+    page.drawText(`Projekt: ${invoice.project_name ?? "-"}`, {
       x: 50,
       y: 255,
       size: 12,
       font,
     });
 
-    page.drawText(`Status: ${invoice.status || "-"}`, {
+    page.drawText(`Status: ${invoice.status ?? "-"}`, {
       x: 50,
       y: 230,
       size: 12,
       font,
     });
 
-    page.drawText(`Brutto: ${invoice.gross_amount || 0} €`, {
+    page.drawText(`Brutto: ${invoice.gross_amount ?? 0} €`, {
       x: 50,
       y: 205,
       size: 12,
       font,
     });
 
-const pdfBytes = await pdfDoc.save();
-const pdfBuffer = new Uint8Array(pdfBytes);
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = new Uint8Array(pdfBytes);
 
-return new Response(pdfBuffer, {
-  headers: {
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `inline; filename="rechnung-${invoice.invoice_no || "augusta"}.pdf"`,
-  },
-});
+    return new Response(pdfBuffer, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="rechnung-${invoice.invoice_no ?? "augusta"}.pdf"`,
+      },
+    });
   } catch (error) {
-    return new Response("PDF konnte nicht erstellt werden.", { status: 500 });
+    console.error("PDF ROUTE ERROR:", error);
+    return NextResponse.json(
+      { error: "PDF konnte nicht erstellt werden." },
+      { status: 500 }
+    );
   }
 }
