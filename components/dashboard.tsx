@@ -574,8 +574,7 @@ export function Dashboard() {
                   <div><b>E-Mail:</b> {selectedInvoice.recipient_email || "-"}</div>
                 </div>
                 <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-  <button
-  style={styles.primaryBtn}
+ <button
   onClick={async () => {
     try {
       setError("");
@@ -593,30 +592,34 @@ export function Dashboard() {
         },
         body: JSON.stringify({
           invoice: selectedInvoice,
-          customer: selectedCustomer,
-          items: selectedItems,
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "PDF konnte nicht erstellt werden.");
+        const text = await res.text();
+        setError(text || "PDF konnte nicht erstellt werden.");
         return;
       }
 
-      setSuccess("PDF erstellt.");
-      if (data.url) {
-        window.open(data.url, "_blank");
-      } else {
-        setError("PDF wurde erstellt, aber keine URL zurückgegeben.");
-      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
 
-      await loadData();
+      setSuccess("PDF erstellt.");
     } catch (err) {
-      setError("Fehler beim PDF-Erstellen.");
       console.error(err);
+      setError("Fehler beim PDF-Erstellen.");
     }
+  }}
+  style={{
+    background: "#ffd700",
+    color: "#000",
+    padding: "10px 16px",
+    borderRadius: "8px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "bold",
+    marginTop: "10px"
   }}
 >
   PDF erstellen
